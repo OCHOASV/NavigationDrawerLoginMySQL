@@ -1,5 +1,6 @@
 package com.roque.meza.navigationdrawerloginmysql;
 
+import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.support.design.widget.TextInputEditText;
 import android.app.ProgressDialog;
@@ -36,10 +37,39 @@ public class LoginActivity extends AppCompatActivity {
     private RequestQueue requestQueue;
     StringRequest stringRequest;
 
+    // Key o ID de las preferences, por lo general se coloca el nombre del paquete
+    private static final String preferecesKey = "navigationdrawerloginmysql";
+    // Nombre de la preference
+    private static final String preferecesSession = "sessionUser";
+    private static final String preferecesID = "sessionID";
+    private static final String preferecesEmail = "sessionEmail";
+    private static final String preferecesNombre = "sessionNombre";
+    private static final String preferecesImg = "sessionImg";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        // Manejo toda la logica de verificar si hay sesion iniciada
+        if (getSessionPreference()){
+            SharedPreferences sessionUser = getSharedPreferences(preferecesKey, MODE_PRIVATE);
+            Integer sessionID = sessionUser.getInt(preferecesID, 0);
+            String sessionEmail = sessionUser.getString(preferecesEmail, "");
+            String sessionNombre = sessionUser.getString(preferecesNombre, "");
+            String sessionImg = sessionUser.getString(preferecesImg, "");
+
+            UserParcelable userParcelable = new UserParcelable();
+            userParcelable.setId(sessionID);
+            userParcelable.setEmail(sessionEmail);
+            userParcelable.setNombre(sessionNombre);
+            userParcelable.setImage(sessionImg);
+
+            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+            intent.putExtra("DATA_USER",userParcelable);
+            startActivity(intent);
+            finish();
+        }
 
         email = (TextInputEditText)findViewById(R.id.etusuario);
         password = (TextInputEditText)findViewById(R.id.etpass);
@@ -65,6 +95,12 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    // Variables para guardar las SharedPreferences
+    Integer userParceID;
+    String userParceEmail = "";
+    String userParceNombre = "";
+    String userParceImg = "";
+
     private void iniciar() {
 
         if (!validar()) return;
@@ -77,7 +113,7 @@ public class LoginActivity extends AppCompatActivity {
         stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                UserParcelable userParcelable = new UserParcelable();;
+                UserParcelable userParcelable = new UserParcelable();
                 Log.i("RESPUESTA JSON: ",""+response);
                 try {
                     JSONObject jsonObject = new JSONObject(response);
@@ -89,6 +125,15 @@ public class LoginActivity extends AppCompatActivity {
                         userParcelable.setEmail(jsonObject.getJSONArray("usuario").getJSONObject(0).getString("email"));
                         userParcelable.setNombre(jsonObject.getJSONArray("usuario").getJSONObject(0).getString("nombres"));
                         userParcelable.setImage(jsonObject.getJSONArray("usuario").getJSONObject(0).getString("photo"));
+
+                        // Seteo mis variables
+                        userParceID = userParcelable.getId();
+                        userParceEmail = userParcelable.getEmail();
+                        userParceNombre = userParcelable.getNombre();
+                        userParceImg = userParcelable.getImage();
+
+                        // Guardo las preferencias
+                        saveSessionPreference();
 
                         Toast.makeText(getApplicationContext(),jsonObject.getString("success"),Toast.LENGTH_SHORT).show();
                         progreso.dismiss();
@@ -115,7 +160,7 @@ public class LoginActivity extends AppCompatActivity {
             }
         }) {
             @Override
-            protected Map<String, String> getParams() throws AuthFailureError {//para enviar los datos mediante POST
+            protected Map<String, String> getParams() throws AuthFailureError { //para enviar los datos mediante POST
                 String sEmail = email.getText().toString();
                 String sPassword =  password.getText().toString();
 
@@ -129,6 +174,7 @@ public class LoginActivity extends AppCompatActivity {
         };
 
         requestQueue.add(stringRequest);
+
     }
 
     private boolean validar() {
@@ -154,4 +200,22 @@ public class LoginActivity extends AppCompatActivity {
         return valid;
     }
 
+    // Guardaremos las SharedPreferences
+    public void saveSessionPreference(){
+        SharedPreferences sessionUser  = getSharedPreferences(preferecesKey, MODE_PRIVATE);
+        SharedPreferences.Editor editor = sessionUser.edit();
+        // Guardaremos true para definir que en edecto hay una sesion
+        editor.putBoolean(preferecesSession, true);
+        editor.putInt(preferecesID, userParceID);
+        editor.putString(preferecesEmail, userParceEmail);
+        editor.putString(preferecesNombre, userParceNombre);
+        editor.putString(preferecesImg, userParceImg);
+        editor.commit();
+    }
+
+    // Recuperaremos el estado, pero por defecto al inicio sera false
+    public boolean getSessionPreference(){
+        SharedPreferences sessionUser = getSharedPreferences(preferecesKey,MODE_PRIVATE);
+        return sessionUser.getBoolean(preferecesSession, false);
+    }
 }
