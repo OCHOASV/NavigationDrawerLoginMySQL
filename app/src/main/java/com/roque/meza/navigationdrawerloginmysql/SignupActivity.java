@@ -1,5 +1,6 @@
 package com.roque.meza.navigationdrawerloginmysql;
 
+import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -48,6 +49,15 @@ public class SignupActivity extends AppCompatActivity {
     private ProgressDialog progreso;
     RequestQueue requestQueue; //permitara la conexion directamente del web service
     StringRequest stringRequest;
+
+    // Key o ID de las preferences, por lo general se coloca el nombre del paquete
+    private static final String preferecesKey = "navigationdrawerloginmysql";
+    // Nombre de la preference
+    private static final String preferecesSession = "sessionUser";
+    private static final String preferecesID = "sessionID";
+    private static final String preferecesEmail = "sessionEmail";
+    private static final String preferecesNombre = "sessionNombre";
+    private static final String preferecesImg = "sessionImg";
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -100,6 +110,12 @@ public class SignupActivity extends AppCompatActivity {
         });
     }
 
+    // Variables para guardar las SharedPreferences
+    Integer userParceID;
+    String userParceEmail = "";
+    String userParceNombre = "";
+    String userParceImg = "";
+
     private void Registrar() {
 
         if (!validar()) return;
@@ -125,6 +141,15 @@ public class SignupActivity extends AppCompatActivity {
                         userParcelable.setNombre(jsonObject.getJSONArray("usuario").getJSONObject(0).getString("nombres"));
                         userParcelable.setImage(jsonObject.getJSONArray("usuario").getJSONObject(0).getString("photo"));
 
+                        // Seteo mis variables
+                        userParceID = userParcelable.getId();
+                        userParceEmail = userParcelable.getEmail();
+                        userParceNombre = userParcelable.getNombre();
+                        userParceImg = userParcelable.getImage();
+
+                        // Guardo las preferencias
+                        saveSessionPreference();
+
                         Toast.makeText(getApplicationContext(),jsonObject.getString("success"),Toast.LENGTH_SHORT).show();
                         progreso.dismiss();
 
@@ -145,7 +170,7 @@ public class SignupActivity extends AppCompatActivity {
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Toast.makeText(getApplicationContext(),"No se ha podido conectar => "+error.toString(),Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(),"No se ha podido conectar => " + error.toString(),Toast.LENGTH_SHORT).show();
                 Log.i("ERROR: ",""+error.toString());
                 progreso.dismiss();
             }
@@ -230,5 +255,18 @@ public class SignupActivity extends AppCompatActivity {
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    // Guardaremos las SharedPreferences
+    public void saveSessionPreference(){
+        SharedPreferences sessionUser  = getSharedPreferences(preferecesKey, MODE_PRIVATE);
+        SharedPreferences.Editor editor = sessionUser.edit();
+        // Guardaremos true para definir que en edecto hay una sesion
+        editor.putBoolean(preferecesSession, true);
+        editor.putInt(preferecesID, userParceID);
+        editor.putString(preferecesEmail, userParceEmail);
+        editor.putString(preferecesNombre, userParceNombre);
+        editor.putString(preferecesImg, userParceImg);
+        editor.commit();
     }
 }
